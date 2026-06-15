@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stock Manager — Add Stock</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --red: #E3000F; --red-light: #ff1a27; --yellow: #FFD100;
+    --black: #0A0A0A; --white: #FFFFFF;
+    --gray-50: #F8F8F8; --gray-100: #F0F0F0; --gray-200: #E0E0E0;
+    --gray-400: #999; --gray-600: #555; --gray-800: #222;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+  /* Auth */
+  #auth-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--black); position: fixed; inset: 0; z-index: 999; transition: opacity 0.4s;
+  }
+  #auth-screen.hidden { opacity: 0; pointer-events: none; }
+  .auth-logos { display: flex; align-items: center; gap: 18px; margin-bottom: 40px; }
+  .auth-logos img { height: 56px; object-fit: contain; }
+  .auth-logos .x-sep { font-family: 'Orbitron', monospace; font-size: 22px; color: var(--yellow); font-weight: 900; }
+  .auth-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 16px; padding: 44px 40px; width: 360px; text-align: center; box-shadow: 0 0 60px rgba(227,0,15,0.12); }
+  .auth-card h2 { font-family: 'Orbitron', monospace; font-size: 18px; color: var(--white); letter-spacing: 2px; margin-bottom: 8px; }
+  .auth-card p { color: var(--gray-400); font-size: 13px; margin-bottom: 32px; }
+  .auth-input { width: 100%; padding: 13px 16px; border: 1px solid #333; border-radius: 8px; background: #0e0e0e; color: var(--white); font-size: 14px; margin-bottom: 14px; outline: none; transition: border-color 0.2s; }
+  .auth-input:focus { border-color: var(--red); }
+  .btn-signin { width: 100%; padding: 14px; background: var(--red); color: var(--white); border: none; border-radius: 8px; font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: 1.5px; cursor: pointer; transition: background 0.2s; }
+  .btn-signin:hover { background: var(--red-light); }
+  .auth-err { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 18px; }
+
+  /* Nav */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.visible { display: flex; }
+  .topnav { display: flex; align-items: center; gap: 20px; padding: 0 32px; height: 64px; background: var(--black); position: sticky; top: 0; z-index: 100; border-bottom: 2px solid var(--red); }
+  .nav-logos { display: flex; align-items: center; gap: 10px; }
+  .nav-logos img { height: 34px; object-fit: contain; }
+  .nav-logos .x-sep { font-family: 'Orbitron', monospace; font-size: 14px; color: var(--yellow); font-weight: 900; }
+  .nav-links { display: flex; gap: 4px; margin-left: auto; }
+  .nav-link { padding: 8px 18px; border-radius: 6px; color: var(--gray-400); font-size: 13px; font-weight: 500; text-decoration: none; transition: all 0.18s; letter-spacing: 0.5px; }
+  .nav-link:hover, .nav-link.active { background: var(--red); color: var(--white); }
+  .nav-user { color: var(--gray-400); font-size: 12px; margin-left: 16px; }
+  .btn-logout { padding: 7px 14px; border: 1px solid #444; border-radius: 6px; background: transparent; color: var(--gray-400); font-size: 12px; cursor: pointer; transition: all 0.18s; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* Layout */
+  .page { padding: 40px 32px; max-width: 1200px; margin: 0 auto; width: 100%; }
+  .page-title { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; color: var(--red); text-transform: uppercase; margin-bottom: 6px; }
+  .page-heading { font-family: 'Orbitron', monospace; font-size: 26px; color: var(--black); margin-bottom: 32px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 32px; border-bottom: 2px solid var(--gray-200); }
+  .tab { padding: 12px 24px; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: var(--gray-600); transition: all 0.2s; font-family: 'Orbitron', monospace; letter-spacing: 1px; font-size: 11px; }
+  .tab:hover { color: var(--black); }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray-600); font-weight: 600; }
+  .form-input, .form-select {
+    padding: 12px 14px; border: 1.5px solid var(--gray-200); border-radius: 8px;
+    font-size: 14px; font-family: 'Inter', sans-serif; outline: none; background: var(--white);
+    color: var(--black); transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--red); }
+  .form-input.error { border-color: var(--red); }
+  .form-row-full { grid-column: 1 / -1; }
+
+  /* Category row */
+  .cat-row { display: flex; gap: 10px; align-items: flex-end; }
+  .cat-row .form-input { flex: 1; }
+  .btn-add-cat { padding: 12px 16px; background: var(--yellow); border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--black); transition: background 0.2s; white-space: nowrap; }
+  .btn-add-cat:hover { background: #e6bc00; }
+
+  .btn-primary {
+    padding: 14px 32px; background: var(--red); color: var(--white); border: none; border-radius: 8px;
+    font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 1.5px; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--red-light); }
+  .btn-secondary {
+    padding: 14px 24px; background: var(--black); color: var(--white); border: none; border-radius: 8px;
+    font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 1.5px; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-secondary:hover { background: #333; }
+
+  .msg { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 16px; display: none; }
+  .msg.success { background: #d4edda; color: #155724; display: block; }
+  .msg.error { background: #f8d7da; color: #721c24; display: block; }
+
+  /* Search panel */
+  .search-bar { display: flex; gap: 12px; margin-bottom: 28px; }
+  .search-bar .form-input { flex: 1; }
+  .btn-search { padding: 12px 24px; background: var(--black); color: var(--white); border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn-search:hover { background: var(--red); }
+
+  /* Stock Table */
+  .tbl-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--gray-200); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--black); color: var(--yellow); font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 1.5px; padding: 14px 16px; text-align: left; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--gray-50); }
+  tbody td { padding: 12px 16px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .badge-cat { background: #fff3cd; color: #856404; }
+  .badge-low { background: #f8d7da; color: #721c24; }
+  .badge-ok { background: #d4edda; color: #155724; }
+
+  /* Edit Modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--white); border-radius: 16px; padding: 40px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.2); }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+  .modal-head h3 { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 1.5px; }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--gray-600); line-height: 1; }
+  .modal-close:hover { color: var(--red); }
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+
+  .loader { text-align: center; padding: 40px; color: var(--gray-400); font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; }
+
+  @media (max-width: 700px) {
+    .topnav { padding: 0 16px; }
+    .page { padding: 24px 16px; }
+    .nav-user { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-logos">
+    <img src="https://raw.githubusercontent.com/projectcentreai-ux/OM-Electronics/main/logo_om-removebg-preview.png" alt="OM" onerror="this.style.display='none'"/>
+    <span class="x-sep">✕</span>
+    <img src="https://raw.githubusercontent.com/ellectra2025-arch/ellectra-automation/main/Ellectra_w01wap%20(2)%20(1).png" alt="Ellectra" onerror="this.style.display='none'"/>
+  </div>
+  <div class="auth-card">
+    <h2>STOCK MANAGER</h2>
+    <p>Sign in to manage stock</p>
+    <input class="auth-input" id="email-inp" type="email" placeholder="Email address"/>
+    <input class="auth-input" id="pass-inp" type="password" placeholder="Password"/>
+    <button class="btn-signin" id="signin-btn">SIGN IN</button>
+    <div class="auth-err" id="auth-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="topnav">
+    <div class="nav-logos">
+      <img src="https://raw.githubusercontent.com/projectcentreai-ux/OM-Electronics/main/logo_om-removebg-preview.png" alt="OM" height="34" onerror="this.style.display='none'"/>
+      <span class="x-sep">✕</span>
+      <img src="https://raw.githubusercontent.com/ellectra2025-arch/ellectra-automation/main/Ellectra_w01wap%20(2)%20(1).png" alt="Ellectra" height="34" onerror="this.style.display='none'"/>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Dashboard</a>
+      <a href="add.html" class="nav-link active">Stock</a>
+      <a href="sale.html" class="nav-link">Sales</a>
+    </div>
+    <span class="nav-user" id="nav-user-email"></span>
+    <button class="btn-logout" id="logout-btn">Sign Out</button>
+  </nav>
+
+  <main class="page">
+    <div class="page-title">Inventory</div>
+    <div class="page-heading">Stock Management</div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="add">ADD ITEM</div>
+      <div class="tab" data-tab="search">FIND &amp; UPDATE</div>
+      <div class="tab" data-tab="all">ALL STOCK</div>
+    </div>
+
+    <!-- ADD PANEL -->
+    <div class="panel active" id="panel-add">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Product Name *</label>
+          <input class="form-input" id="prod-name" placeholder="e.g. Arduino Uno R3"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <div class="cat-row">
+            <select class="form-select" id="prod-cat" style="flex:1"></select>
+            <input class="form-input" id="new-cat-inp" placeholder="New category…" style="flex:1"/>
+            <button class="btn-add-cat" id="add-cat-btn">+ Add</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">HSN/SAC Code</label>
+          <input class="form-input" id="prod-hsn" placeholder="e.g. 8542"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quantity *</label>
+          <input class="form-input" id="prod-qty" type="number" min="0" placeholder="0"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Selling Price (₹) *</label>
+          <input class="form-input" id="prod-price" type="number" min="0" placeholder="0.00"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cost Price (₹)</label>
+          <input class="form-input" id="prod-cost" type="number" min="0" placeholder="0.00"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit</label>
+          <select class="form-select" id="prod-unit">
+            <option>NOS</option>
+            <option>PCS</option>
+            <option>KG</option>
+            <option>MTR</option>
+            <option>BOX</option>
+            <option>SET</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input class="form-input" id="prod-desc" placeholder="Optional notes"/>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:24px; flex-wrap:wrap;">
+        <button class="btn-primary" id="save-btn">SAVE ITEM</button>
+        <button class="btn-secondary" id="clear-btn">CLEAR</button>
+      </div>
+      <div class="msg" id="add-msg"></div>
+    </div>
+
+    <!-- SEARCH PANEL -->
+    <div class="panel" id="panel-search">
+      <div class="search-bar">
+        <input class="form-input" id="search-inp" placeholder="Search by product name or category…"/>
+        <button class="btn-search" id="search-btn">SEARCH</button>
+      </div>
+      <div class="tbl-wrap">
+        <div id="search-placeholder" style="text-align:center;padding:48px;color:var(--gray-400);font-size:13px">Search for a product to view and update it.</div>
+        <table id="search-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Product</th><th>Category</th><th>HSN</th><th>Qty</th><th>Price</th><th>Unit</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="search-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ALL STOCK PANEL -->
+    <div class="panel" id="panel-all">
+      <div class="loader" id="all-loader">LOADING STOCK…</div>
+      <div class="tbl-wrap">
+        <table id="all-table" style="display:none">
+          <thead>
+            <tr>
+              <th>Product</th><th>Category</th><th>HSN</th><th>Qty</th><th>Price (₹)</th><th>Unit</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="all-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>UPDATE STOCK ITEM</h3>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <input type="hidden" id="edit-id"/>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Product Name</label>
+        <input class="form-input" id="edit-name"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="edit-cat"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">HSN/SAC</label>
+        <input class="form-input" id="edit-hsn"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantity</label>
+        <input class="form-input" id="edit-qty" type="number" min="0"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Selling Price (₹)</label>
+        <input class="form-input" id="edit-price" type="number"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cost Price (₹)</label>
+        <input class="form-input" id="edit-cost" type="number"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit</label>
+        <select class="form-select" id="edit-unit">
+          <option>NOS</option><option>PCS</option><option>KG</option>
+          <option>MTR</option><option>BOX</option><option>SET</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input class="form-input" id="edit-desc"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="update-btn">UPDATE ITEM</button>
+      <button class="btn-secondary" id="modal-close2" style="background:#666">CANCEL</button>
+    </div>
+    <div class="msg" id="edit-msg"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, getDoc, serverTimestamp, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAiabWKiwA9eP5DHn68Y1ZZtDKHt2ZjDZQ",
+  authDomain: "stock-listing-bb1f6.firebaseapp.com",
+  projectId: "stock-listing-bb1f6",
+  storageBucket: "stock-listing-bb1f6.firebasestorage.app",
+  messagingSenderId: "358845608088",
+  appId: "1:358845608088:web:5d47e6e3e22329859160ed"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let categories = [];
+let allStock = [];
+
+// --- Auth ---
+document.getElementById('signin-btn').onclick = async () => {
+  const email = document.getElementById('email-inp').value.trim();
+  const pass = document.getElementById('pass-inp').value;
+  const errEl = document.getElementById('auth-err');
+  errEl.textContent = '';
+  try { await signInWithEmailAndPassword(auth, email, pass); }
+  catch(e) { errEl.textContent = e.message.replace('Firebase: ','').replace(/\(.*\)/,''); }
+};
+document.getElementById('pass-inp').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('signin-btn').click(); });
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, async user => {
+  if(user) {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('nav-user-email').textContent = user.email;
+    await loadCategories();
+    await loadAllStock();
+  } else {
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('app').classList.remove('visible');
+  }
+});
+
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+// --- Categories ---
+async function loadCategories() {
+  try {
+    const snap = await getDocs(collection(db, 'categories'));
+    categories = [];
+    snap.forEach(d => categories.push(d.data().name));
+    if(categories.length === 0) categories = ['Electronics', 'Sensors', 'Modules', 'Cables', 'Tools', 'Other'];
+    populateCatSelects();
+  } catch(e) {
+    categories = ['Electronics', 'Sensors', 'Modules', 'Cables', 'Tools', 'Other'];
+    populateCatSelects();
+  }
+}
+
+function populateCatSelects() {
+  ['prod-cat', 'edit-cat'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  });
+}
+
+document.getElementById('add-cat-btn').onclick = async () => {
+  const newCat = document.getElementById('new-cat-inp').value.trim();
+  if(!newCat) return;
+  if(!categories.includes(newCat)) {
+    try {
+      await addDoc(collection(db, 'categories'), { name: newCat });
+    } catch(e) {}
+    categories.push(newCat);
+    populateCatSelects();
+  }
+  document.getElementById('prod-cat').value = newCat;
+  document.getElementById('new-cat-inp').value = '';
+};
+
+// --- Add Stock ---
+document.getElementById('save-btn').onclick = async () => {
+  const name = document.getElementById('prod-name').value.trim();
+  const cat = document.getElementById('prod-cat').value;
+  const qty = parseInt(document.getElementById('prod-qty').value) || 0;
+  const price = parseFloat(document.getElementById('prod-price').value) || 0;
+  const msgEl = document.getElementById('add-msg');
+  msgEl.className = 'msg';
+
+  if(!name) { msgEl.className = 'msg error'; msgEl.textContent = 'Product name is required.'; return; }
+  if(!price) { msgEl.className = 'msg error'; msgEl.textContent = 'Selling price is required.'; return; }
+
+  try {
+    await addDoc(collection(db, 'stock'), {
+      name, category: cat,
+      hsn: document.getElementById('prod-hsn').value.trim(),
+      quantity: qty,
+      price,
+      costPrice: parseFloat(document.getElementById('prod-cost').value) || 0,
+      unit: document.getElementById('prod-unit').value,
+      description: document.getElementById('prod-desc').value.trim(),
+      createdAt: serverTimestamp()
+    });
+    msgEl.className = 'msg success';
+    msgEl.textContent = `✅ "${name}" added to stock successfully!`;
+    document.getElementById('clear-btn').click();
+    await loadAllStock();
+  } catch(e) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'Error saving: ' + e.message;
+  }
+};
+
+document.getElementById('clear-btn').onclick = () => {
+  ['prod-name','prod-hsn','prod-qty','prod-price','prod-cost','prod-desc','new-cat-inp'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('add-msg').className = 'msg';
+};
+
+// --- Load All Stock ---
+async function loadAllStock() {
+  try {
+    const snap = await getDocs(query(collection(db, 'stock'), orderBy('name')));
+    allStock = [];
+    snap.forEach(d => allStock.push({ id: d.id, ...d.data() }));
+    renderStockTable(allStock, 'all-tbody');
+    document.getElementById('all-loader').style.display = 'none';
+    document.getElementById('all-table').style.display = '';
+  } catch(e) {
+    document.getElementById('all-loader').textContent = 'Failed to load stock.';
+  }
+}
+
+function renderStockTable(items, tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  if(!items.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999">No items found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(d => `
+    <tr>
+      <td style="font-weight:600">${d.name||'-'}</td>
+      <td><span class="badge badge-cat">${d.category||'-'}</span></td>
+      <td style="font-family:monospace;color:#888">${d.hsn||'-'}</td>
+      <td><span class="badge ${(d.quantity||0)<=5?'badge-low':'badge-ok'}">${d.quantity||0}</span></td>
+      <td style="font-weight:600;color:var(--red)">₹${(d.price||0).toLocaleString('en-IN')}</td>
+      <td style="color:#888">${d.unit||'NOS'}</td>
+      <td><button onclick="openEdit('${d.id}')" style="padding:6px 14px;background:var(--black);color:var(--white);border:none;border-radius:6px;cursor:pointer;font-size:12px">Edit</button></td>
+    </tr>`).join('');
+}
+
+// --- Search ---
+document.getElementById('search-btn').onclick = () => {
+  const q = document.getElementById('search-inp').value.trim().toLowerCase();
+  if(!q) return;
+  const results = allStock.filter(d =>
+    (d.name||'').toLowerCase().includes(q) || (d.category||'').toLowerCase().includes(q) || (d.hsn||'').includes(q)
+  );
+  document.getElementById('search-placeholder').style.display = 'none';
+  document.getElementById('search-table').style.display = '';
+  renderStockTable(results, 'search-tbody');
+};
+document.getElementById('search-inp').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('search-btn').click();
+});
+
+// --- Edit Modal ---
+window.openEdit = async (id) => {
+  const item = allStock.find(d => d.id === id);
+  if(!item) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-name').value = item.name || '';
+  document.getElementById('edit-hsn').value = item.hsn || '';
+  document.getElementById('edit-qty').value = item.quantity || 0;
+  document.getElementById('edit-price').value = item.price || 0;
+  document.getElementById('edit-cost').value = item.costPrice || 0;
+  document.getElementById('edit-unit').value = item.unit || 'NOS';
+  document.getElementById('edit-desc').value = item.description || '';
+  populateCatSelects();
+  document.getElementById('edit-cat').value = item.category || '';
+  document.getElementById('edit-msg').className = 'msg';
+  document.getElementById('edit-modal').classList.add('open');
+};
+
+['modal-close','modal-close2'].forEach(id => {
+  document.getElementById(id).onclick = () => document.getElementById('edit-modal').classList.remove('open');
+});
+
+document.getElementById('update-btn').onclick = async () => {
+  const id = document.getElementById('edit-id').value;
+  const msgEl = document.getElementById('edit-msg');
+  msgEl.className = 'msg';
+  try {
+    await updateDoc(doc(db, 'stock', id), {
+      name: document.getElementById('edit-name').value.trim(),
+      category: document.getElementById('edit-cat').value,
+      hsn: document.getElementById('edit-hsn').value.trim(),
+      quantity: parseInt(document.getElementById('edit-qty').value) || 0,
+      price: parseFloat(document.getElementById('edit-price').value) || 0,
+      costPrice: parseFloat(document.getElementById('edit-cost').value) || 0,
+      unit: document.getElementById('edit-unit').value,
+      description: document.getElementById('edit-desc').value.trim(),
+      updatedAt: serverTimestamp()
+    });
+    msgEl.className = 'msg success';
+    msgEl.textContent = '✅ Item updated successfully!';
+    await loadAllStock();
+    setTimeout(() => document.getElementById('edit-modal').classList.remove('open'), 1200);
+  } catch(e) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = 'Error: ' + e.message;
+  }
+};
+</script>
+</body>
+</html>
